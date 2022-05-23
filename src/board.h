@@ -1,6 +1,77 @@
 ﻿#pragma once
 #include <iostream>
+#include <vector>
 
+class Point
+{
+	int x_ = -1,
+		y_ = -1;
+public:
+	Point() {}
+	Point(int x, int y) :x_(x), y_(y) {}
+
+	int x() const
+	{
+		return x_;
+	}
+
+	int y() const
+	{
+		return y_;
+	}
+
+	void setX(int x)
+	{
+		x_ = x;
+	}
+
+	void setY(int y)
+	{
+		y_ = y;
+	}
+
+	void set(int x, int y)
+	{
+		x_ = x;
+		y_ = y;
+	}
+
+	bool operator == (const Point& p) const
+	{
+		return p.x() == x_ && p.y() == y_;
+	}
+	bool operator != (const Point& p) const
+	{
+		return !(p == *this);
+	}
+
+	Point getRight() const
+	{
+		return Point(x_ + 1, y_);
+	}
+
+	Point getLeft() const
+	{
+		return Point(x_ - 1, y_);
+	}
+
+	Point getUp() const
+	{
+		return Point(x_, y_ - 1);
+	}
+
+	Point getDown() const
+	{
+		return Point(x_, y_ + 1);
+	}
+
+	static double distance(const Point p1, const Point p2)
+	{
+		double dx = (double)p2.x() - (double)p1.x();
+		double dy = (double)p2.y() - (double)p1.y();
+		return sqrt(dx * dx + dy * dy);
+	}
+};
 
 class Mass {
 public:
@@ -13,40 +84,141 @@ public:
 		WATER,// 進むのが1/3に遅くなる
 		ROAD,//進むのが3倍速い
 	};
+	enum listed
+	{
+		NONE,
+		OPEN,
+		CLOSE,
+	};
+
 private:
 	status s_ = BLANK;
+	listed listed_ = NONE;
+	Point pos_;
+	Mass* pParent_ = nullptr;
+	int steps_ = 0;
+	double estimate_ = 0.0;
+
+	static int getWalkCost(Mass& m)
+	{
+		status s = m.getStatus();
+
+		//道路は進む倍率が3倍になる
+		if (s == ROAD)
+		{
+			return 1;
+		}
+		else
+		{
+			return 3;
+		}
+
+		//水は進む倍率が1/3倍になる
+		if (s == WATER)
+		{
+			return 3;
+		}
+		else
+		{
+			return 1;
+		}
+	}
+
+	void calcCost(const Point target)
+	{
+		steps_ = (pParent_ ? pParent_->steps_ : 0) + getWalkCost(*this);
+
+		//ゴールまでのコスト推定値を3倍大きくした場合、最短経路が変わってしまうので不採用
+		//estimate_ = 3.0 * Point::distance(pos_, target);
+		//ゴールまでのコスト推定値を2倍にした場合は最短経路に変化はなかったので採用
+		estimate_ = 2.0 * Point::distance(pos_, target);
+	}
+
 public:
-	void setStatus(status s) { s_ = s; }
-	status getStatus() const { return s_; }
+	void setStatus(status s)
+	{
+		s_ = s;
+	}
+
+	status getStatus() const
+	{
+		return s_;
+	}
+
+	void setPos(int x, int y)
+	{
+		pos_.set(x, y);
+	}
+	const Point& getPos() const
+	{
+		return pos_;
+	}
+
+	int x()
+	{
+		return pos_.x();
+	}
+
+	int y()
+	{
+		return pos_.y();
+	}
+
+	void setParent(Mass* pParent, const Point& goal)
+	{
+		pParent_ = pParent;
+		calcCost(goal);
+	}
+	Mass* getParent()
+	{
+		return pParent_;
+	}
+
+	void setListed(listed t)
+	{
+		listed_ = t;
+	}
+
+	bool isListed(listed t) const
+	{
+		return listed_ == t;
+	}
+
+	double getCost() const
+	{
+		return (double)steps_ + estimate_;
+	}
 };
 
-class Point {
-	int x_ = -1,
-		y_ = -1;
-public:
-	Point(int x, int y) :x_(x), y_(y) {}
-	int x() const { return x_; }
-	int y() const { return y_; }
-	void setX(int x) { x_ = x; }
-	void setY(int y) { y_ = y; }
+bool static asc(const Mass* o1, const Mass* o2)
+{
+	return o1->getCost() < o2->getCost();
+}
 
-	bool operator == (const Point& p) const {
-		return p.x() == x_ && p.y() == y_;}
-	bool operator != (const Point& p) const {
-		return !(p == *this);}
-};
-
-class Board {
+class Board
+{
 private:
-	enum {
+	enum
+	{
 		BOARD_SIZE = 10,
 	};
+
 	Mass mass_[BOARD_SIZE][BOARD_SIZE];
+	Mass& getMass(const Point p)
+	{
+		return mass_[p.y()][p.x()];
+	}
+
+	std::vector<Mass*> open_list_;
+
 public:
-	Board() {
-		for (int y = 0; y < BOARD_SIZE; y++) {
-			for (int x = 0; x < BOARD_SIZE; x++) {
-				mass_[y][x].setStatus(Mass::BLANK);
+	Board()
+	{
+		for (int y = 0; y < BOARD_SIZE; y++)
+		{
+			for (int x = 0; x < BOARD_SIZE; x++)
+			{
+				mass_[y][x].setPos(x, y);
 			}
 		}
 		// 壁
@@ -55,8 +227,10 @@ public:
 		mass_[5][5].setStatus(Mass::WALL);
 		mass_[6][5].setStatus(Mass::WALL);
 		// 水
-		for (int y = 4; y <= 7; y++) {
-			for (int x = 1; x <= 4; x++) {
+		for (int y = 4; y <= 7; y++)
+		{
+			for (int x = 1; x <= 4; x++)
+			{
 				mass_[y][x].setStatus(Mass::WATER);
 			}
 		}
@@ -70,6 +244,10 @@ public:
 		mass_[6][3].setStatus(Mass::ROAD);
 	}
 	~Board() {}
+
+	void addWall(const Point& p);
+
+	bool isValidated(const Point& p);
 
 	bool find(const Point& start, const Point& goal);
 
