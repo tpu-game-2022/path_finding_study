@@ -42,6 +42,10 @@ private:
 		BOARD_SIZE = 10,
 	};
 	Mass mass_[BOARD_SIZE][BOARD_SIZE];
+
+	//getMass（Getを生成　Mass型関数　
+	//ポイントの引き数をもらって配列（座標）を返す）
+	Mass& getMass(const Point p) { return mass_[p.y()][p.x()]; }
 public:
 	Board() {
 		for (int y = 0; y < BOARD_SIZE; y++) {
@@ -70,8 +74,64 @@ public:
 		mass_[6][3].setStatus(Mass::ROAD);
 	}
 	~Board() {}
+	void addWall(const Point& p) { getMass(p).setStatus(Mass::WALL); }
+
+	bool isValidated(const Point& p) {
+		if(getMass(p).getStatus() == Mass::WALL) {
+			return false;
+		}
+		return true;
+	}
 
 	bool find(const Point& start, const Point& goal);
 
-	void show() const;
+	void show() const {
+		std::cout << std::endl;
+
+		for (int y = 0; y < BOARD_SIZE; y++) {
+			std::cout << " ";
+			for (int x = 0; x < BOARD_SIZE; x++) {
+				std::cout << "+-";
+			}
+			std::cout << "+" << std::endl;
+
+			std::cout << " ";
+			for (int x = 0; x < BOARD_SIZE; x++) {
+				std::cout << "|";
+				switch (mass_[y][x].getStatus()) {
+				case Mass::BLANK:
+					std::cout << " ";
+					break;
+				case Mass::START:
+					std::cout << "S";
+					break;
+				case Mass::GOAL:
+					std::cout << "G";
+					break;
+				case Mass::WAYPOINT:
+					std::cout << "o";
+					break;
+				case Mass::WALL:
+					std::cout << "#";
+					break;
+				case Mass::WATER:
+					std::cout << "~";
+					break;
+				case Mass::ROAD:
+					std::cout << "$";
+					break;
+				}
+			}
+			std::cout << "|" << std::endl;
+		}
+
+		std::cout << " ";
+		for (int x = 0; x < BOARD_SIZE; x++) {
+			std::cout << "+-";
+		}
+		std::cout << "+" << std::endl;
+
+	}
+
+
 };

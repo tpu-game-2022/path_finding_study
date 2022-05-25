@@ -1,68 +1,32 @@
 #include "board.h"
 
+//pが行ける場所か調べる
+
 bool Board::find(const Point& start, const Point& goal)
 {
-	mass_[start.y()][start.x()].setStatus(Mass::START);
-	mass_[goal.y()][goal.x()].setStatus(Mass::GOAL);
+	getMass(start).setStatus(Mass::START);
+	getMass(goal).setStatus(Mass::GOAL);
 
 	Point p = start;
 	while (p != goal) {
-		if (p != start) mass_[p.x()][p.y()].setStatus(Mass::WAYPOINT);
+		Mass &m = getMass(p);
+		Mass::status status = m.getStatus();
+		if (p != start) m.setStatus(Mass::WAYPOINT);
+		Point next;
 
-		if (p.x() < goal.x()) { p.setX(p.x() + 1); continue; }
-		if (goal.x() < p.x()) { p.setX(p.x() - 1); continue; }
-		if (p.y() < goal.y()) { p.setY(p.y() + 1); continue; }
-		if (goal.y() < p.y()) { p.setY(p.y() - 1); continue; }
+		int diff_x = abs(p.x() - goal.x());//xの差
+		int diff_y = abs(p.y() - goal.y());//yの差
+		if (diff_x > diff_y) {
+			if (p.x() < goal.x()) {
+				p.setX(next.x() + 1); if (isValidated(next)) { p = next; continue; }
+			}//ゴールが右側いあれば右に移動
+			if (goal.x() < p.x()) { next.setX(p.x() - 1); if (isValidated(next)) { p = next; continue; } }//左側にあれば左に移動
+		}//↑xが先　　↓yが先
+		if (p.y() < goal.y()) { next.setY(p.y() + 1); if (isValidated(next)) { p = next; continue; } }//上側なら上
+		if (goal.y() < p.y()) { next.setY(p.y() - 1); if (isValidated(next)) { p = next; continue; } }//下側なら下
+	
+		return false;
+
 	}
-
-	return false;
-}
-
-void Board::show() const 
-{
-	std::cout << std::endl;
-
-	for (int y = 0; y < BOARD_SIZE; y++) {
-		std::cout << " ";
-		for (int x = 0; x < BOARD_SIZE; x++) {
-			std::cout << "+-";
-		}
-		std::cout << "+" << std::endl;
-
-		std::cout << " ";
-		for (int x = 0; x < BOARD_SIZE; x++) {
-			std::cout << "|";
-			switch (mass_[y][x].getStatus()) {
-			case Mass::BLANK:
-				std::cout << " ";
-				break;
-			case Mass::START:
-				std::cout << "S";
-				break;
-			case Mass::GOAL:
-				std::cout << "G";
-				break;
-			case Mass::WAYPOINT:
-				std::cout << "o";
-				break;
-			case Mass::WALL:
-				std::cout << "#";
-				break;
-			case Mass::WATER:
-				std::cout << "~";
-				break;
-			case Mass::ROAD:
-				std::cout << "$";
-				break;
-			}
-		}
-		std::cout << "|" << std::endl;
-	}
-
-	std::cout << " ";
-	for (int x = 0; x < BOARD_SIZE; x++) {
-		std::cout << "+-";
-	}
-	std::cout << "+" << std::endl;
-
+	return true;
 }
