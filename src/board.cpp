@@ -1,18 +1,80 @@
 #include "board.h"
 
+bool Board::isValidated(const Point& p)
+{
+	if (getMass(p).getStatus() == Mass::WALL)
+	{
+		return false;
+	}
+	return true;
+}
+
+bool asc(const Mass* o1, const Mass* o2)
+{
+	return o1->getCost() < o2->getCost();
+}
+
 bool Board::find(const Point& start, const Point& goal)
 {
+	Mass &mass_start = getMass(start);
+	Mass& mass_goal = getMass(goal);
+
 	mass_[start.y()][start.x()].setStatus(Mass::START);
 	mass_[goal.y()][goal.x()].setStatus(Mass::GOAL);
 
-	Point p = start;
-	while (p != goal) {
-		if (p != start) mass_[p.x()][p.y()].setStatus(Mass::WAYPOINT);
+	//オープンリストに開始ノードを追加
+	open_list_.clear();
+	open_list_.push_back(&mass_start);
 
-		if (p.x() < goal.x()) { p.setX(p.x() + 1); continue; }
-		if (goal.x() < p.x()) { p.setX(p.x() - 1); continue; }
-		if (p.y() < goal.y()) { p.setY(p.y() + 1); continue; }
-		if (goal.y() < p.y()) { p.setY(p.y() - 1); continue; }
+	//オープンリストが空ではない
+	while (!open_list_.empty())
+	{
+		//現在のノード=オープンリストの最も安価なリスト
+		std::sort(open_list_.begin(), open_list_.end(),asc);
+		auto it = open_list_.begin();
+		Mass* current = *it;
+		if (current->getStatus() == Mass::GOAL)
+		{
+			//目標地なら経路の完成
+			Mass* p = current; //経路のステータスをMass::WAYPOINTにする
+			while (p)
+			{
+				if (p->getStatus() == Mass::BLANK)
+				{
+					p->setStatus(Mass::WAYPOINT);
+				}
+
+				p = p->getParent();
+			}
+
+			return true;
+		}
+		else
+		{
+			//現在のノードをクローズリストに移す
+			open_list_.erase(it);
+			current->setListed(Mass::CLOSE);
+			//現在のノードの隣接する各ノードを調べる
+			const Point& pos = current->getPos();
+			Point next[4] = { pos.getRight(),pos.getLeft(),pos.getUp(),pos.getDown() };
+			//隣接ノード
+			for (auto& c : next)
+			{
+				//マップ外ならスキップ
+				if (c.x() < 0 || BOARD_SIZE <= c.x()) continue;
+				if (c.y() < 0 || BOARD_SIZE <= c.y()) continue;
+				Mass& m = getMass(c);
+				if (!m.isListed(Mass::OPEN) && //オープンリストに含まれていない
+					!m.isListed(Mass::CLOSE) && //クローズ度リストに含まれていない
+					m.getStatus() != Mass::WALL)//障害物でない
+				{
+					//オープンリストに写してコストを計算する
+					open_list_.push_back(&m);
+					m.setParent(current, goal);
+					m.setListed(Mass::OPEN);
+				}
+			}
+		}
 	}
 
 	return false;
