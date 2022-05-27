@@ -1,52 +1,29 @@
 ﻿#pragma once
 #include <iostream>
+#include <vector>
+#include "Mass.h"
+#include "Point.h"
 
-
-class Mass {
-public:
-	enum status {
-		BLANK,
-		GOAL,
-		START,
-		WAYPOINT,
-		WALL, // 通れない
-		WATER,// 進むのが1/3に遅くなる
-		ROAD,//進むのが3倍速い
-	};
+class Board
+{
 private:
-	status s_ = BLANK;
-public:
-	void setStatus(status s) { s_ = s; }
-	status getStatus() const { return s_; }
-};
-
-class Point {
-	int x_ = -1,
-		y_ = -1;
-public:
-	Point(int x, int y) :x_(x), y_(y) {}
-	int x() const { return x_; }
-	int y() const { return y_; }
-	void setX(int x) { x_ = x; }
-	void setY(int y) { y_ = y; }
-
-	bool operator == (const Point& p) const {
-		return p.x() == x_ && p.y() == y_;}
-	bool operator != (const Point& p) const {
-		return !(p == *this);}
-};
-
-class Board {
-private:
-	enum {
+	enum
+	{
 		BOARD_SIZE = 10,
 	};
 	Mass mass_[BOARD_SIZE][BOARD_SIZE];
+	Mass& getMass(const Point p) { return mass_[p.y()][p.x()]; }
+
+	std::vector<Mass*> open_list_;
 public:
-	Board() {
-		for (int y = 0; y < BOARD_SIZE; y++) {
-			for (int x = 0; x < BOARD_SIZE; x++) {
+	Board()
+	{
+		for (int y = 0; y < BOARD_SIZE; y++)
+		{
+			for (int x = 0; x < BOARD_SIZE; x++)
+			{
 				mass_[y][x].setStatus(Mass::BLANK);
+				mass_[y][x].setPos(x, y);  // ?
 			}
 		}
 		// 壁
@@ -55,8 +32,10 @@ public:
 		mass_[5][5].setStatus(Mass::WALL);
 		mass_[6][5].setStatus(Mass::WALL);
 		// 水
-		for (int y = 4; y <= 7; y++) {
-			for (int x = 1; x <= 4; x++) {
+		for (int y = 4; y <= 7; y++)
+		{
+			for (int x = 1; x <= 4; x++)
+			{
 				mass_[y][x].setStatus(Mass::WATER);
 			}
 		}
@@ -70,6 +49,14 @@ public:
 		mass_[6][3].setStatus(Mass::ROAD);
 	}
 	~Board() {}
+
+	// pが行ける場所か調べる
+	bool isValidated(const Point& p)
+	{
+		if (getMass(p).getStatus() == Mass::WALL) return false;
+
+		return true;
+	}
 
 	bool find(const Point& start, const Point& goal);
 
