@@ -29,6 +29,7 @@ bool Board::find(const Point& start, const Point& goal)
 	mass_start.setStatus(Mass::START);
 	mass_goal.setStatus(Mass::GOAL);
 
+	mass_start.setPos(start.x(), start.y());
 	openList.clear();
 	openList.push_back(&mass_start);
 
@@ -42,7 +43,7 @@ bool Board::find(const Point& start, const Point& goal)
 			Mass* p = current;
 			while (p)
 			{
-				if (p->getStatus() == Mass::BLANK)
+				if (p->getStatus() != Mass::START && p->getStatus() != Mass::GOAL)
 				{
 					p->setStatus(Mass::WAYPOINT);
 				}
@@ -51,20 +52,20 @@ bool Board::find(const Point& start, const Point& goal)
 			return true;
 		}
 		else
-		{
+		{	
 			openList.erase(it);
 			current->setListed(Mass::CLOSE);
-
+			
 			const Point& pos = current->getPos();
 			Point next[4] = { pos.getRight(),pos.getLeft(),pos.getUp(),pos.getDown() };
 			for (auto& c : next)
 			{
-				std::cout << c.x() <<':' << c.y();
 				if (c.x() < 0 || BOARD_SIZE <= c.x())continue;
 				if (c.y() < 0 || BOARD_SIZE <= c.y())continue;
 				Mass& m = getMass(c);
 				if (!m.isListed(Mass::OPEN) && !m.isListed(Mass::CLOSE) && m.getStatus() != Mass::WALL)
 				{
+					m.setPos(c.x(), c.y());
 					openList.push_back(&m);
 					m.setParent(current, goal);
 					m.setListed(Mass::OPEN);

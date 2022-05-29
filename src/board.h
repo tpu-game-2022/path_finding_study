@@ -6,9 +6,10 @@
 class Point {
 	int x_ = -1,
 		y_ = -1;
-public:
-	Point(int x, int y) :x_(x), y_(y) {}
+public:	
 	Point() {}
+	Point(int x, int y) :x_(x), y_(y) {}
+
 	int x() const { return x_; }
 	int y() const { return y_; }
 	void setX(int x) { x_ = x; }
@@ -53,18 +54,23 @@ private:
 	listed listed_ = NONE;
 	Point pos_;
 	Mass* pParent_ = nullptr;
-	int steps_ = 0;
+	float steps_ = 0;
 	double estimate_ = 0.0;
 
 	void calcCost(const Point target)
 	{
+		float cost = 1;
+		if (this->getStatus() == WATER)
+			cost = 3;
+		else if (this->getStatus() == ROAD)
+			cost = 1/3;
 		if (pParent_)
 		{
-			steps_ = pParent_->steps_ + 1;
+			steps_ = pParent_->steps_ + cost;
 		}
 		else
 		{
-			steps_ = 1;
+			steps_ = cost;
 		}
 
 		estimate_ = Point::distance(pos_, target);
