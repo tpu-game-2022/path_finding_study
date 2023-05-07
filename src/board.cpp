@@ -1,24 +1,70 @@
 #include "board.h"
+#include <algorithm>
 
+bool asc(const Mass* o1, const Mass* o2)
+{
+	return o1->getCost() < o2->getCost();
+}
 bool Board::find(const Point& start, const Point& goal)
 {
-	mass_[start.y()][start.x()].setStatus(Mass::START);
-	mass_[goal.y()][goal.x()].setStatus(Mass::GOAL);
+	Mass& mass_start = getMass(start);
+	Mass& mass_goal = getMass(goal);
 
-	Point p = start;
-	while (p != goal) {
-		if (p != start) mass_[p.x()][p.y()].setStatus(Mass::WAYPOINT);
+	mass_start.setStatus(Mass::START);
+	mass_goal.setStatus(Mass::GOAL);
 
-		if (p.x() < goal.x()) { p.setX(p.x() + 1); continue; }
-		if (goal.x() < p.x()) { p.setX(p.x() - 1); continue; }
-		if (p.y() < goal.y()) { p.setY(p.y() + 1); continue; }
-		if (goal.y() < p.y()) { p.setY(p.y() - 1); continue; }
+	open_List_.clear();
+	open_List_.push_back(&mass_start);
+
+	while (!open_List_.empty())
+	{
+		//asc‚Åƒ\[ƒg
+		std::sort(open_List_.begin(), open_List_.end(), asc);
+		
+		auto it = open_List_.begin();
+		
+		Mass* current = *it;
+		
+		if (current->getStatus() == Mass::GOAL)
+		{
+			Mass* p = current;
+
+			while (p)
+			{
+				if (p->getStatus() == Mass::BLANK) p->setStatus(Mass::WAYPOINT); p = p->getParent();
+
+			}
+			return true;
+		}
+		else
+		{
+			open_List_.erase(it);
+			current->setListed(Mass::CLOSE);
+			const Point& pos = current->getPos();
+			Point next[4] = { pos.getRight(),pos.getLeft(),pos.getUp(),pos.getDown() };
+
+			Point p;
+			for (auto& c : next)
+			{
+
+				if (c.x() < 0 || BOARD_SIZE <= c.x())continue;
+				if (c.y() < 0 || BOARD_SIZE <= c.y())continue;
+
+				Mass& mass = getMass(c);
+
+				if (!mass.isListed(Mass::OPEN) && !mass.isListed(Mass::CLOSE) && mass.getStatus() != Mass::WALL)
+				{
+					open_List_.push_back(&mass);
+					//WATER
+					mass.setParent(current, goal);
+					mass.setListed(Mass::OPEN);
+				}
+			}
+		}
 	}
-
 	return false;
-}
-
-void Board::show() const 
+};
+void Board::show() const
 {
 	std::cout << std::endl;
 
